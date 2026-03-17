@@ -1,0 +1,92 @@
+.time-block-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.block-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: hsl(var(--color-primary));
+  padding-bottom: var(--spacing-2);
+  border-bottom: 2px solid hsl(var(--border-light));
+}
+
+.blocks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-3);
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: var(--spacing-2);
+}
+
+.time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  gap: var(--spacing-1);
+}
+
+.block-time {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.block-status {
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* States */
+.time-block.available {
+  background-color: hsla(var(--color-success), 0.05);
+  border-color: hsla(var(--color-success), 0.2);
+  color: hsl(var(--color-success));
+}
+
+.time-block.available:hover:not(:disabled) {
+  background-color: hsla(var(--color-success), 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px hsla(var(--color-success), 0.2);
+}
+
+.time-block.occupied {
+  background-color: hsla(var(--color-error), 0.05);
+  border-color: hsla(var(--color-error), 0.2);
+  color: hsl(var(--color-error));
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.time-block.past {
+  background-color: hsl(var(--border-light) / 0.5);
+  border-color: transparent;
+  color: hsl(var(--text-muted));
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.time-block.blocked {
+  background-color: hsla(var(--color-warning), 0.1);
+  border-color: hsla(var(--color-warning), 0.4);
+  color: hsl(var(--color-warning));
+  cursor: not-allowed;
+}
+
+[data-theme='dark'] .time-block.occupied {
+  background-color: hsla(var(--color-error), 0.1);
+}
+[data-theme='dark'] .time-block.available {
+  background-color: hsla(var(--color-success), 0.1);
+}

@@ -1,0 +1,88 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background-color: hsl(var(--bg-app));
+  overflow: hidden;
+  padding: var(--spacing-4);
+}
+
+.login-pattern {
+  position: absolute;
+  inset: -50%;
+  background-image: 
+    radial-gradient(circle at 50% 50%, hsla(var(--color-primary), 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, hsla(var(--color-secondary), 0.08) 0%, transparent 30%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.login-content {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--spacing-8);
+  text-align: center;
+}
+
+.login-brand .brand-icon {
+  color: hsl(var(--color-primary));
+  margin-bottom: var(--spacing-3);
+  filter: drop-shadow(0 4px 6px hsla(var(--color-primary), 0.2));
+}
+
+.login-brand h1 {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-1);
+  background: linear-gradient(135deg, hsl(var(--color-primary)), hsl(var(--color-secondary)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-card {
+  width: 100%;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.error-alert {
+  background-color: hsla(var(--color-error), 0.1);
+  color: hsl(var(--color-error));
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  border: 1px solid hsla(var(--color-error), 0.2);
+}
+
+.demo-section {
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-4);
+  border-top: 1px dashed hsl(var(--border-light));
+}
+
+.demo-title {
+  text-align: center;
+  margin-bottom: var(--spacing-2);
+}
+
+.mb-2 { margin-bottom: var(--spacing-2); }
+.text-center { text-align: center; }
+
+.login-footer {
+  margin-top: var(--spacing-6);
+  text-align: center;
+}

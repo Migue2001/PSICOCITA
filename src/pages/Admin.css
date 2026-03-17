@@ -1,0 +1,121 @@
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr;
+  gap: var(--spacing-4);
+}
+
+.table-wrapper {
+  overflow: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--spacing-2) var(--spacing-3);
+  text-align: left;
+  border-bottom: 1px solid hsl(var(--border-light));
+  font-size: 0.95rem;
+}
+
+.admin-table select {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid hsl(var(--border-light));
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.status-pill.active {
+  background: hsla(var(--color-success), 0.12);
+  color: hsl(var(--color-success));
+}
+
+.status-pill.inactive {
+  background: hsla(var(--color-error), 0.12);
+  color: hsl(var(--color-error));
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+.schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.input-label {
+  display: block;
+  font-size: 0.85rem;
+  color: hsl(var(--text-muted));
+  margin-bottom: 6px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-3);
+}
+
+.blocked-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.blocked-item {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.blocked-item input {
+  padding: 8px;
+  border: 1px solid hsl(var(--border-light));
+  border-radius: var(--radius-sm);
+}
+
+.error-alert {
+  background: hsla(var(--color-error), 0.1);
+  color: hsl(var(--color-error));
+  padding: var(--spacing-2);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 960px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}

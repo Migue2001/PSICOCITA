@@ -1,0 +1,72 @@
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-3);
+}
+
+.input-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--text-main));
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: hsl(var(--text-muted));
+  display: flex;
+  pointer-events: none;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 1rem;
+  background-color: transparent;
+  color: hsl(var(--text-main));
+  border: 1px solid hsl(var(--border-light));
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input-field.with-icon {
+  padding-left: 2.5rem;
+}
+
+.input-field:focus {
+  border-color: hsl(var(--border-focus));
+  box-shadow: 0 0 0 3px hsla(var(--border-focus), 0.2);
+}
+
+.input-field.error {
+  border-color: hsl(var(--color-error));
+}
+
+.input-field.error:focus {
+  box-shadow: 0 0 0 3px hsla(var(--color-error), 0.2);
+}
+
+.input-field:disabled {
+  background-color: hsl(var(--border-light) / 0.3);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.input-helper {
+  font-size: 0.75rem;
+  color: hsl(var(--text-muted));
+  margin-top: 2px;
+}
+
+.error-text {
+  color: hsl(var(--color-error));
+}
