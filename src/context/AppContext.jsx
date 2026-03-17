@@ -35,35 +35,6 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Obtiene el horario del admin/super_admin para que todos los usuarios
-  // vean el mismo horario, sin importar quién esté logueado.
-  const fetchAdminSchedule = async () => {
-    try {
-      // 1. Buscar el id del usuario con rol admin o super_admin
-      const { data: adminProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .in('role', ['admin', 'super_admin'])
-        .limit(1)
-        .maybeSingle();
-
-      if (profileError || !adminProfile) return null;
-
-      // 2. Buscar su horario
-      const { data: schedData, error: schedError } = await supabase
-        .from('provider_schedules')
-        .select('*')
-        .eq('user_id', adminProfile.id)
-        .maybeSingle();
-
-      if (schedError || !schedData) return null;
-      return schedData;
-    } catch (err) {
-      console.error('fetchAdminSchedule error:', err);
-      return null;
-    }
-  };
-
   const fetchData = async () => {
     setLoading(true);
     
@@ -79,6 +50,7 @@ export const AppProvider = ({ children }) => {
         }
       };
 
+      // Mock data load
       const localApps = safeParse('psico_apps', demoAppointments);
       const localPats = safeParse('psico_pats', demoPatients);
       const localNots = safeParse('psico_nots', demoNotifications);
@@ -101,22 +73,23 @@ export const AppProvider = ({ children }) => {
     }
 
     try {
-      const [appRes, patRes, notRes, schedData] = await Promise.all([
+      // Real DB Fetching
+      const [appRes, patRes, notRes, schedRes] = await Promise.all([
         supabase.from('appointments').select('*, patient:patients(*)').order('start_time', { ascending: true }),
         supabase.from('patients').select('*').order('full_name', { ascending: true }),
         supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        fetchAdminSchedule()
+        supabase.from('app_config').select('*').eq('id', 1).single()
       ]);
 
       if (!appRes.error) setAppointments(appRes.data);
       if (!patRes.error) setPatients(patRes.data);
       if (!notRes.error) setNotifications(notRes.data);
-      if (schedData) {
+      if (!schedRes.error && schedRes.data) {
         setSchedule({
-          start_hour: schedData.start_hour ?? 9,
-          end_hour: schedData.end_hour ?? 18,
-          slot_minutes: schedData.slot_minutes ?? 45,
-          blocked_ranges: schedData.blocked_ranges || []
+          start_hour: schedRes.data.start_hour ?? 9,
+          end_hour: schedRes.data.end_hour ?? 18,
+          slot_minutes: schedRes.data.slot_minutes ?? 45,
+          blocked_ranges: schedRes.data.blocked_ranges || []
         });
       }
 
@@ -140,16 +113,15 @@ export const AppProvider = ({ children }) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'provider_schedules' },
-        async () => {
+        { event: 'UPDATE', schema: 'public', table: 'app_config' },
+        (payload) => {
           // Cuando el admin cambia el horario, todos los usuarios lo reciben al instante
-          const schedData = await fetchAdminSchedule();
-          if (schedData) {
+          if (payload.new) {
             setSchedule({
-              start_hour: schedData.start_hour ?? 9,
-              end_hour: schedData.end_hour ?? 18,
-              slot_minutes: schedData.slot_minutes ?? 45,
-              blocked_ranges: schedData.blocked_ranges || []
+              start_hour: payload.new.start_hour ?? 9,
+              end_hour: payload.new.end_hour ?? 18,
+              slot_minutes: payload.new.slot_minutes ?? 45,
+              blocked_ranges: payload.new.blocked_ranges || []
             });
           }
         }
@@ -301,17 +273,16 @@ export const AppProvider = ({ children }) => {
       return { data: newSchedule, error: null };
     }
 
-    const payload = {
-      user_id: user.id,
-      start_hour: newSchedule.start_hour,
-      end_hour: newSchedule.end_hour,
-      slot_minutes: newSchedule.slot_minutes,
-      blocked_ranges: newSchedule.blocked_ranges || []
-    };
-
     const { data, error } = await supabase
-      .from('provider_schedules')
-      .upsert(payload, { onConflict: 'user_id' })
+      .from('app_config')
+      .update({
+        start_hour: newSchedule.start_hour,
+        end_hour: newSchedule.end_hour,
+        slot_minutes: newSchedule.slot_minutes,
+        blocked_ranges: newSchedule.blocked_ranges || [],
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', 1)
       .select()
       .single();
 
