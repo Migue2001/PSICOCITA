@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Modo demo forzado por env o por falta de Supabase
 const isDemoMode = !supabase;
 
 const AuthContext = createContext({});
@@ -10,62 +9,50 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
-  const [slow, setSlow] = useState(false);
+  // FIX #3: usamos un ref para evitar que initAuth y onAuthStateChange
+  // se ejecuten en paralelo y se pisen mutuamente.
+  const authInitialized = useRef(false);
 
   useEffect(() => {
-    const slowTimer = setTimeout(() => setSlow(true), 3000);
-
-    const initAuth = async () => {
-      try {
-        if (supabase) {
-          const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-          if (error) throw error;
-          console.log('Auth init session', initialSession);
-          setSession(initialSession);
-          if (initialSession?.user) {
-            await fetchUserProfile(initialSession.user.id, initialSession.user.email);
-          }
-        } else if (isDemoMode) {
-          const mockUser = localStorage.getItem('psicocita_mock_user');
-          if (mockUser) {
-            try {
-              setUser(JSON.parse(mockUser));
-            } catch {
-              localStorage.removeItem('psicocita_mock_user');
-            }
-          }
+    if (isDemoMode) {
+      // Modo demo: solo leer de localStorage, sin Supabase
+      const mockUser = localStorage.getItem('psicocita_mock_user');
+      if (mockUser) {
+        try {
+          setUser(JSON.parse(mockUser));
+        } catch {
+          localStorage.removeItem('psicocita_mock_user');
         }
-      } catch (err) {
-        console.error('Initial auth error:', err);
-      } finally {
-        setLoading(false);
       }
-    };
+      setLoading(false);
+      return;
+    }
 
-    initAuth();
-
-    const authListener = supabase?.auth?.onAuthStateChange(
+    // FIX #1 y #3: dejamos que onAuthStateChange sea el ÚNICO responsable
+    // de manejar el estado. No corremos initAuth en paralelo.
+    // INITIAL_SESSION se dispara automáticamente con la sesión guardada.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('Auth state change:', event);
         setSession(newSession);
 
         if (newSession?.user) {
-          await fetchUserProfile(newSession.user.id, newSession.user.email);
+          // Usamos setTimeout para evitar deadlock con Supabase internamente
+          setTimeout(async () => {
+            await fetchUserProfile(newSession.user.id, newSession.user.email);
+            setLoading(false);
+          }, 0);
         } else {
-          if (!isDemoMode || !localStorage.getItem('psicocita_mock_user')) {
-            setUser(null);
-          }
+          setUser(null);
+          setLoading(false);
         }
-
-        setLoading(false);
       }
     );
 
     return () => {
-      authListener?.data?.subscription?.unsubscribe();
-      clearTimeout(slowTimer);
+      subscription?.unsubscribe();
     };
-  }, []); // ✅ Array vacío — solo corre una vez
+  }, []);
 
   const fetchUserProfile = async (userId, fallbackEmail) => {
     if (!supabase) return;
@@ -79,6 +66,8 @@ export const AuthProvider = ({ children }) => {
       if (error) {
         if (error?.name === 'AbortError') return;
         console.error('Error fetching profile:', error);
+        // FIX #1: si falla el perfil, ponemos un usuario mínimo en vez de null
+        // para que ProtectedRoute no redirija al login con sesión activa
         setUser({ id: userId, email: fallbackEmail, role: 'user' });
         return;
       }
@@ -94,6 +83,8 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       if (err?.name === 'AbortError') return;
       console.error('fetchUserProfile error:', err);
+      // FIX #1: igual que arriba, no dejar user en null si hay sesión
+      setUser({ id: userId, email: fallbackEmail, role: 'user' });
     }
   };
 
@@ -117,9 +108,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data?.user) {
-      await fetchUserProfile(data.user.id, data.user.email);
-    }
+    // No llamamos fetchUserProfile aquí: onAuthStateChange lo hará automáticamente
     return { data, error };
   };
 
@@ -128,9 +117,7 @@ export const AuthProvider = ({ children }) => {
       return { data: null, error: { message: 'Supabase no está configurado.' } };
     }
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (!error && data?.user) {
-      await fetchUserProfile(data.user.id, data.user.email);
-    }
+    // No llamamos fetchUserProfile aquí: onAuthStateChange lo hará automáticamente
     return { data, error };
   };
 
