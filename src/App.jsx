@@ -12,6 +12,8 @@ import { PatientDetail } from './pages/PatientDetail';
 import { Notifications } from './pages/Notifications';
 import { Admin } from './pages/Admin';
 import { Register } from './pages/Register';
+import { ToastProvider } from './components/toast';
+import { DebugStatus } from './components/DebugStatus';
 
 class AppErrorBoundary extends Component {
   constructor(props) {
@@ -70,21 +72,24 @@ const AdminRoute = ({ children }) => {
 
 const AppRoutes = () => {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      
-      <Route element={<ProtectedRoute><AppProvider><Layout /></AppProvider></ProtectedRoute>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/calendar" element={<CalendarView />} />
-        <Route path="/patients" element={<Patients />} />
-        <Route path="/patients/:id" element={<PatientDetail />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-      </Route>
-      
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <DebugStatus />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        <Route element={<ProtectedRoute><AppProvider><Layout /></AppProvider></ProtectedRoute>}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/calendar" element={<CalendarView />} />
+          <Route path="/patients" element={<Patients />} />
+          <Route path="/patients/:id" element={<PatientDetail />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+        </Route>
+        
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 };
 
@@ -92,9 +97,11 @@ const App = () => {
   return (
     <BrowserRouter>
       <AppErrorBoundary>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ToastProvider>
       </AppErrorBoundary>
     </BrowserRouter>
   );
