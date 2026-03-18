@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '../components/Card';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
@@ -9,12 +9,15 @@ import { format, isSameDay, parseISO, addDays, subDays, isToday as dateFnsIsToda
 import { es } from 'date-fns/locale';
 import { Plus, Users, Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/toast';
+import { ConfirmModal } from '../components/ConfirmModal';
 import './Dashboard.css';
 
 export const Dashboard = () => {
-  const { appointments, fetchData, loading, cancelAppointment, schedule } = useApp();
+  const { appointments, loading, cancelAppointment, markAppointmentComplete, schedule } = useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   
@@ -22,12 +25,8 @@ export const Dashboard = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [cancellingDelay, setCancellingDelay] = useState(false);
-
-  useEffect(() => {
-    // We keep fetching the fresh data just in case this is the first load
-    // but the context Realtime channel and addAppointment handles updates
-    fetchData();
-  }, []);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [completingId, setCompletingId] = useState(null);
 
   const onPrevDay = () => setSelectedDate(subDays(selectedDate, 1));
   const onNextDay = () => setSelectedDate(addDays(selectedDate, 1));
@@ -39,10 +38,27 @@ export const Dashboard = () => {
   };
 
   const handleCancelAppointment = async () => {
-    if (window.confirm('¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el horario.')) {
-      setCancellingDelay(true);
-      await cancelAppointment(selectedApp.id);
-      setCancellingDelay(false);
+    setCancellingDelay(true);
+    const { error } = await cancelAppointment(selectedApp.id);
+    setCancellingDelay(false);
+    setConfirmOpen(false);
+    setIsDetailsOpen(false);
+    setSelectedApp(null);
+    if (error) {
+      toast.error('No se pudo cancelar la cita.');
+    } else {
+      toast.success('Cita cancelada correctamente.');
+    }
+  };
+
+  const handleMarkComplete = async (appId) => {
+    setCompletingId(appId);
+    const { error } = await markAppointmentComplete(appId);
+    setCompletingId(null);
+    if (error) {
+      toast.error('No se pudo marcar como completada.');
+    } else {
+      toast.success('Cita marcada como completada.');
       setIsDetailsOpen(false);
       setSelectedApp(null);
     }
@@ -214,22 +230,42 @@ export const Dashboard = () => {
                 type="button" 
                 variant="outline"
                 className="text-error border-error hover:bg-error-light"
-                onClick={handleCancelAppointment}
-                disabled={cancellingDelay}
+                onClick={() => setConfirmOpen(true)}
               >
-                {cancellingDelay ? 'Cancelando...' : 'Cancelar Cita'}
+                Cancelar Cita
               </Button>
-
-              <Button type="button" onClick={() => {
-                setIsDetailsOpen(false);
-                setSelectedApp(null);
-              }}>
-                Cerrar
-              </Button>
+              <div className="flex gap-2">
+                {selectedApp?.status === 'scheduled' && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    loading={completingId === selectedApp?.id}
+                    onClick={() => handleMarkComplete(selectedApp.id)}
+                  >
+                    ✓ Completada
+                  </Button>
+                )}
+                <Button type="button" onClick={() => {
+                  setIsDetailsOpen(false);
+                  setSelectedApp(null);
+                }}>
+                  Cerrar
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </Modal>
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleCancelAppointment}
+        title="Cancelar cita"
+        message="¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el horario."
+        confirmLabel="Sí, cancelar"
+        danger
+        loading={cancellingDelay}
+      />
     </div>
   );
 };

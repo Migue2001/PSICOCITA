@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from '../components/Card';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -7,12 +7,8 @@ import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import { Shield, UserCog, Power, Save, Plus, Trash2 } from 'lucide-react';
 import './Admin.css';
-
-const roleLabels = {
-  user: 'Interna',
-  admin: 'Licenciada',
-  super_admin: 'Super Admin'
-};
+import { useToast } from '../components/toast';
+import { canManage, ROLE_LABELS } from '../lib/roles';
 
 export const Admin = () => {
   const { user, isDemoMode } = useAuth();
@@ -28,6 +24,7 @@ export const Admin = () => {
     slot_minutes: schedule.slot_minutes,
     blocked_ranges: schedule.blocked_ranges || []
   });
+  const toast = useToast();
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   useEffect(() => {
@@ -77,7 +74,7 @@ export const Admin = () => {
 
   const handleRoleChange = async (profileId, newRole) => {
     if (profileId === user.id && user.role !== 'super_admin') {
-      alert('No puedes cambiar tu propio rol.');
+      toast.warning('No puedes cambiar tu propio rol.');
       return;
     }
 
@@ -92,7 +89,7 @@ export const Admin = () => {
       .eq('id', profileId);
 
     if (error) {
-      alert('No se pudo actualizar el rol.');
+      toast.error('No se pudo actualizar el rol.');
       return;
     }
     setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, role: newRole } : p));
@@ -100,7 +97,7 @@ export const Admin = () => {
 
   const handleToggleActive = async (profileId, isActive) => {
     if (profileId === user.id && !isActive) {
-      alert('No puedes desactivar tu propia cuenta.');
+      toast.warning('No puedes desactivar tu propia cuenta.');
       return;
     }
 
@@ -115,7 +112,7 @@ export const Admin = () => {
       .eq('id', profileId);
 
     if (error) {
-      alert('No se pudo actualizar el estado.');
+      toast.error('No se pudo actualizar el estado.');
       return;
     }
     setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, is_active: isActive } : p));
@@ -159,12 +156,14 @@ export const Admin = () => {
 
     const { error } = await saveSchedule(payload);
     if (error) {
-      alert('No se pudo guardar el horario.');
+      toast.error('No se pudo guardar el horario.');
+    } else {
+      toast.success('Horario guardado correctamente.');
     }
     setSavingSchedule(false);
   };
 
-  const canManage = useMemo(() => ['admin', 'super_admin'].includes(user?.role), [user]);
+  // canManage viene de lib/roles.js
 
   return (
     <div className="admin-page animate-fade-in">
@@ -210,10 +209,10 @@ export const Admin = () => {
                           <select
                             value={p.role}
                             onChange={(e) => handleRoleChange(p.id, e.target.value)}
-                            disabled={!canManage || (p.id === user.id && user.role !== 'super_admin')}
+                            disabled={!canManage(user?.role) || (p.id === user.id && user.role !== 'super_admin')}
                           >
-                            {Object.keys(roleLabels).map((r) => (
-                              <option key={r} value={r}>{roleLabels[r]}</option>
+                            {Object.keys(ROLE_LABELS).map((r) => (
+                              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                             ))}
                           </select>
                         </td>
@@ -228,7 +227,7 @@ export const Admin = () => {
                             variant={p.is_active === false ? 'primary' : 'outline'}
                             size="sm"
                             onClick={() => handleToggleActive(p.id, !(p.is_active === false))}
-                            disabled={!canManage}
+                            disabled={!canManage(user?.role)}
                           >
                             <Power size={14} /> {p.is_active === false ? 'Reactivar' : 'Desactivar'}
                           </Button>

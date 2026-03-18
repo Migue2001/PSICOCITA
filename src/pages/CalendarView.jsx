@@ -10,11 +10,14 @@ import { format, startOfMonth, startOfWeek, endOfMonth, endOfWeek, eachDayOfInte
 import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Plus } from 'lucide-react';
 import './CalendarView.css';
+import { useToast } from '../components/toast';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export const CalendarView = () => {
   const { appointments, patients, addAppointment, addPatient, setPatients, cancelAppointment, schedule } = useApp();
   const { user, isDemoMode } = useAuth();
   
+  const toast = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   
@@ -33,6 +36,8 @@ export const CalendarView = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [cancellingDelay, setCancellingDelay] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const onNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const onPrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -49,7 +54,20 @@ export const CalendarView = () => {
     p.full_name?.toLowerCase().includes(patientSearch.toLowerCase())
   ).slice(0, 5); // Max 5 results
 
-  const handleSelectBlock = (block) => {
+  const handleSelectBlock = async (block) => {
+    if (isRescheduling && selectedApp) {
+      // Modo reagendar: cancelar la cita anterior y abrir modal con datos precargados
+      await cancelAppointment(selectedApp.id);
+      setSelectedBlock(block);
+      setPatientSearch(selectedApp.patient?.full_name || '');
+      setSelectedPatientId(selectedApp.patient_id);
+      setAppointmentNotes(selectedApp.notes || '');
+      setIsRescheduling(false);
+      setSelectedApp(null);
+      setIsModalOpen(true);
+      setBookingError('');
+      return;
+    }
     setSelectedBlock(block);
     setIsModalOpen(true);
     setBookingError('');
@@ -64,13 +82,25 @@ export const CalendarView = () => {
   };
 
   const handleCancelAppointment = async () => {
-    if (window.confirm('¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el horario.')) {
-      setCancellingDelay(true);
-      await cancelAppointment(selectedApp.id);
-      setCancellingDelay(false);
-      setIsDetailsOpen(false);
-      setSelectedApp(null);
+    setCancellingDelay(true);
+    const { error } = await cancelAppointment(selectedApp.id);
+    setCancellingDelay(false);
+    setConfirmOpen(false);
+    setIsDetailsOpen(false);
+    setSelectedApp(null);
+    if (error) {
+      toast.error('No se pudo cancelar la cita.');
+    } else {
+      toast.success('Cita cancelada correctamente.');
     }
+  };
+
+  const handleReschedule = () => {
+    // Cierra el modal de detalles y activa modo reagendar:
+    // el próximo bloque que el usuario seleccione reemplazará la cita actual.
+    setIsRescheduling(true);
+    setIsDetailsOpen(false);
+    toast.info('Selecciona el nuevo horario en el calendario.');
   };
 
   const handleBookAppointment = async (e) => {
@@ -110,6 +140,7 @@ export const CalendarView = () => {
       notes: appointmentNotes
     };
 
+    const wasRescheduling = isRescheduling;
     const { error } = await addAppointment(newApp);
     
     setBookingLoading(false);
@@ -118,6 +149,7 @@ export const CalendarView = () => {
       setBookingError('Error al guardar: Este horario ya no está disponible o hubo un problema de red.');
     } else {
       setIsModalOpen(false);
+      toast.success(wasRescheduling ? 'Cita reagendada correctamente.' : 'Cita agendada correctamente.');
     }
   };
 
@@ -319,19 +351,36 @@ export const CalendarView = () => {
                 type="button" 
                 variant="outline"
                 className="text-error border-error hover:bg-error-light"
-                onClick={handleCancelAppointment}
-                disabled={cancellingDelay}
+                onClick={() => setConfirmOpen(true)}
               >
-                {cancellingDelay ? 'Cancelando...' : 'Cancelar Cita'}
+                Cancelar Cita
               </Button>
-
-              <Button type="button" onClick={() => setIsDetailsOpen(false)}>
-                Cerrar
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleReschedule}
+                >
+                  Reagendar
+                </Button>
+                <Button type="button" onClick={() => setIsDetailsOpen(false)}>
+                  Cerrar
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </Modal>
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleCancelAppointment}
+        title="Cancelar cita"
+        message="¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el horario."
+        confirmLabel="Sí, cancelar"
+        danger
+        loading={cancellingDelay}
+      />
     </div>
   );
 };

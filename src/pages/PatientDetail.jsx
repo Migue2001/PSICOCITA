@@ -10,6 +10,9 @@ import { useAuth } from '../context/AuthContext';
 import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, User, Phone, Mail, Clock, FileText, CheckCircle, Edit3, Lock, Trash2 } from 'lucide-react';
+import { useToast } from '../components/toast';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { canEditClinical } from '../lib/roles';
 
 const safeFormatDate = (dateString, formatStr, options = {}) => {
   if (!dateString) return '-';
@@ -40,6 +43,8 @@ export const PatientDetail = () => {
   const [editForm, setEditForm] = useState({ full_name: '', phone: '', email: '' });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (patients.length > 0) {
@@ -85,15 +90,15 @@ export const PatientDetail = () => {
   };
 
   const handleDeletePatient = async () => {
-    if (window.confirm(`¿Estás completamente seguro de eliminar el perfil de ${patient.full_name}? Esto borrará todo su historial y citas de forma permanente.`)) {
-      setIsDeleting(true);
-      const { error } = await deletePatient(patient.id);
-      if (!error) {
-        navigate('/patients');
-      } else {
-        alert('Hubo un error al eliminar el paciente.');
-        setIsDeleting(false);
-      }
+    setIsDeleting(true);
+    const { error } = await deletePatient(patient.id);
+    setIsDeleting(false);
+    setConfirmDeleteOpen(false);
+    if (!error) {
+      toast.success(`Paciente ${patient.full_name} eliminado.`);
+      navigate('/patients');
+    } else {
+      toast.error('Hubo un error al eliminar el paciente.');
     }
   };
 
@@ -141,7 +146,7 @@ export const PatientDetail = () => {
                   variant="outline" 
                   size="sm" 
                   className="w-full text-error border-error hover:bg-error-light" 
-                  onClick={handleDeletePatient}
+                  onClick={() => setConfirmDeleteOpen(true)}
                   disabled={isDeleting}
                 >
                   <Trash2 size={14} /> {isDeleting ? 'Eliminando...' : 'Eliminar Paciente'}
@@ -173,14 +178,14 @@ export const PatientDetail = () => {
               <h3 className="font-semibold text-lg flex items-center gap-2 text-primary-dark">
                 <Edit3 size={18} /> Observaciones Clínicas (Privado)
               </h3>
-              {user?.role === 'admin' && !isEditingNotes && (
+              {canEditClinical(user?.role) && !isEditingNotes && (
                 <Button variant="outline" size="sm" onClick={() => setIsEditingNotes(true)}>
                   Editar
                 </Button>
               )}
             </CardHeader>
             <CardContent>
-              {user?.role === 'admin' ? (
+              {canEditClinical(user?.role) ? (
                 isEditingNotes ? (
                   <div className="flex flex-col gap-3">
                     <textarea
@@ -286,6 +291,16 @@ export const PatientDetail = () => {
         </form>
       </Modal>
 
+      <ConfirmModal
+        isOpen={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        onConfirm={handleDeletePatient}
+        title={`Eliminar a ${patient?.full_name}`}
+        message="Esta acción borrará todo su historial y citas de forma permanente. No se puede deshacer."
+        confirmLabel="Sí, eliminar"
+        danger
+        loading={isDeleting}
+      />
     </div>
   );
 };
