@@ -64,14 +64,18 @@ export const Dashboard = () => {
     }
   };
 
+  // Todas las citas del día excepto canceladas (para estadísticas)
   const dayApps = appointments
     .filter(a => a.status !== 'cancelled' && isSameDay(parseISO(a.start_time), selectedDate))
     .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-    
-  // If viewing past/future/today days, show all appointments for the day up to 10
-  const nextApps = dayApps.slice(0, 10);
-    
+
+  // Solo las completadas para el contador
   const completedCount = dayApps.filter(a => a.status === 'completed').length;
+
+  // Solo las pendientes para mostrar en la agenda (excluye completadas)
+  const nextApps = dayApps
+    .filter(a => a.status !== 'completed')
+    .slice(0, 10);
 
   if (loading) {
     return <div className="flex justify-center p-8"><span className="loader" style={{borderColor: 'var(--color-primary)'}}></span></div>;
