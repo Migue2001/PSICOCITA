@@ -263,6 +263,37 @@ export const AppProvider = ({ children }) => {
     return { error };
   };
 
+  const markAppointmentNoShow = async (appId) => {
+    if (isDemoMode) {
+      const updated = appointments.map(app =>
+        app.id === appId ? { ...app, status: 'no_show' } : app
+      );
+      setAppointments(updated);
+      localStorage.setItem('psico_apps', JSON.stringify(updated));
+      return { error: null };
+    }
+
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'no_show' })
+      .eq('id', appId);
+
+    if (!error) {
+      setAppointments(prev =>
+        prev.map(app => app.id === appId ? { ...app, status: 'no_show' } : app)
+      );
+
+      // Crear notificación automática
+      await supabase.from('notifications').insert([{
+        user_id: user.id,
+        title: 'Paciente no se presentó',
+        message: 'Un paciente no asistió a su cita programada.',
+        type: 'warning'
+      }]);
+    }
+    return { error };
+  };
+
   const deletePatient = async (id) => {
     if (isDemoMode) {
       const updatedPats = patients.filter(p => p.id !== id);
@@ -332,6 +363,7 @@ export const AppProvider = ({ children }) => {
       deletePatient,
       cancelAppointment,
       markAppointmentComplete,
+      markAppointmentNoShow,
       fetchData,
       saveSchedule,
       isDemoMode,
