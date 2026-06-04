@@ -154,3 +154,13 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--text-muted));
 }
+
+/* Status color utilities */
+.text-primary { color: hsl(var(--color-primary)); }
+.text-success { color: hsl(var(--color-success)); }
+.text-error { color: hsl(var(--color-error)); }
+.text-warning { color: hsl(var(--color-warning)); }
+.text-info { color: hsl(var(--color-info)); }
+
+.border-warning { border-color: hsl(var(--color-warning)) !important; }
+.border-error { border-color: hsl(var(--color-error)) !important; }
