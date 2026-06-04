@@ -33,6 +33,11 @@
   color: hsl(var(--color-primary));
 }
 
+.badge-no_show {
+  background-color: hsla(var(--color-warning), 0.12);
+  color: hsl(var(--color-warning));
+}
+
 [data-theme='dark'] .badge {
   filter: brightness(1.2);
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { format, addMinutes, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Check, X } from 'lucide-react';
+import { Check, X, UserX } from 'lucide-react';
 import './TimeBlockSelector.css';
 
 export const TimeBlockSelector = ({ selectedDate, appointments = [], onSelectBlock, onSelectOccupied, schedule }) => {
@@ -78,11 +78,14 @@ export const TimeBlockSelector = ({ selectedDate, appointments = [], onSelectBlo
 
           const firstName = occupiedApp?.patient?.full_name?.split(' ')[0] || 'Cita';
 
+          const isNoShow = occupiedApp?.status === 'no_show';
+          const isCompleted = occupiedApp?.status === 'completed';
+
           return (
             <button
               key={i}
-              className={`time-block ${occupiedApp ? 'occupied cursor-pointer' : isBlocked ? 'blocked' : 'available'} ${isPast && !occupiedApp ? 'past' : ''}`}
-              disabled={disabled}
+              className={`time-block ${occupiedApp ? (isNoShow ? 'no-show' : isCompleted ? 'completed' : 'occupied cursor-pointer') : isBlocked ? 'blocked' : 'available'} ${isPast && !occupiedApp ? 'past' : ''}`}
+              disabled={disabled || isNoShow || isCompleted}
               onClick={() => {
                 if (occupiedApp) {
                   onSelectOccupied && onSelectOccupied(occupiedApp);
@@ -96,7 +99,13 @@ export const TimeBlockSelector = ({ selectedDate, appointments = [], onSelectBlo
               </div>
               <div className="block-status">
                 {occupiedApp ? (
-                  <><X size={14} /> {firstName}</>
+                  isNoShow ? (
+                    <><UserX size={14} /> No asistió</>
+                  ) : isCompleted ? (
+                    <><Check size={14} /> Completada</>
+                  ) : (
+                    <><X size={14} /> {firstName}</>
+                  )
                 ) : isBlocked ? (
                   'Bloqueado'
                 ) : isPast ? (
