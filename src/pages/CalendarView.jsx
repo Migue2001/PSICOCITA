@@ -8,13 +8,13 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { format, startOfMonth, startOfWeek, endOfMonth, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Plus, UserX } from 'lucide-react';
 import './CalendarView.css';
 import { useToast } from '../components/toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 export const CalendarView = () => {
-  const { appointments, patients, addAppointment, addPatient, setPatients, cancelAppointment, schedule } = useApp();
+  const { appointments, patients, addAppointment, addPatient, setPatients, cancelAppointment, markAppointmentNoShow, schedule } = useApp();
   const { user, isDemoMode } = useAuth();
   
   const toast = useToast();
@@ -38,6 +38,8 @@ export const CalendarView = () => {
   const [cancellingDelay, setCancellingDelay] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const [noShowId, setNoShowId] = useState(null);
+  const [noShowConfirmOpen, setNoShowConfirmOpen] = useState(false);
 
   const onNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const onPrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -101,6 +103,20 @@ export const CalendarView = () => {
     setIsRescheduling(true);
     setIsDetailsOpen(false);
     toast.info('Selecciona el nuevo horario en el calendario.');
+  };
+
+  const handleMarkNoShow = async () => {
+    setNoShowId(selectedApp.id);
+    const { error } = await markAppointmentNoShow(selectedApp.id);
+    setNoShowId(null);
+    setNoShowConfirmOpen(false);
+    setIsDetailsOpen(false);
+    setSelectedApp(null);
+    if (error) {
+      toast.error('No se pudo registrar la inasistencia.');
+    } else {
+      toast.success('Paciente registrado como inasistente.');
+    }
   };
 
   const handleBookAppointment = async (e) => {
@@ -346,15 +362,27 @@ export const CalendarView = () => {
               </p>
             </div>
 
-            <div className="flex gap-2 justify-between mt-4">
-              <Button 
-                type="button" 
-                variant="outline"
-                className="text-error border-error hover:bg-error-light"
-                onClick={() => setConfirmOpen(true)}
-              >
-                Cancelar Cita
-              </Button>
+            <div className="flex gap-2 justify-between mt-4" style={{ flexWrap: 'wrap' }}>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="text-error border-error hover:bg-error-light"
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  Cancelar Cita
+                </Button>
+                {selectedApp?.status === 'scheduled' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-warning border-warning"
+                    onClick={() => setNoShowConfirmOpen(true)}
+                  >
+                    <UserX size={16} /> No se presentó
+                  </Button>
+                )}
+              </div>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -380,6 +408,16 @@ export const CalendarView = () => {
         confirmLabel="Sí, cancelar"
         danger
         loading={cancellingDelay}
+      />
+      <ConfirmModal
+        isOpen={noShowConfirmOpen}
+        onClose={() => setNoShowConfirmOpen(false)}
+        onConfirm={handleMarkNoShow}
+        title="Paciente no se presentó"
+        message="¿Estás seguro de que deseas marcar esta cita como inasistencia? El paciente será registrado como 'No se presentó'."
+        confirmLabel="Sí, registrar"
+        danger
+        loading={!!noShowId}
       />
     </div>
   );

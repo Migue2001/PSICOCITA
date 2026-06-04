@@ -7,14 +7,14 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { format, isSameDay, parseISO, addDays, subDays, isToday as dateFnsIsToday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, Users, Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft, User } from 'lucide-react';
+import { Plus, Users, Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft, User, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 import './Dashboard.css';
 
 export const Dashboard = () => {
-  const { appointments, loading, cancelAppointment, markAppointmentComplete, schedule } = useApp();
+  const { appointments, loading, cancelAppointment, markAppointmentComplete, markAppointmentNoShow, schedule } = useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -27,6 +27,7 @@ export const Dashboard = () => {
   const [cancellingDelay, setCancellingDelay] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completingId, setCompletingId] = useState(null);
+  const [noShowId, setNoShowId] = useState(null);
 
   const onPrevDay = () => setSelectedDate(subDays(selectedDate, 1));
   const onNextDay = () => setSelectedDate(addDays(selectedDate, 1));
@@ -64,6 +65,19 @@ export const Dashboard = () => {
     }
   };
 
+  const handleMarkNoShow = async (appId) => {
+    setNoShowId(appId);
+    const { error } = await markAppointmentNoShow(appId);
+    setNoShowId(null);
+    if (error) {
+      toast.error('No se pudo registrar la inasistencia.');
+    } else {
+      toast.success('Paciente registrado como inasistente.');
+      setIsDetailsOpen(false);
+      setSelectedApp(null);
+    }
+  };
+
   // Todas las citas del día excepto canceladas (para estadísticas)
   const dayApps = appointments
     .filter(a => a.status !== 'cancelled' && isSameDay(parseISO(a.start_time), selectedDate))
@@ -71,10 +85,11 @@ export const Dashboard = () => {
 
   // Solo las completadas para el contador
   const completedCount = dayApps.filter(a => a.status === 'completed').length;
+  const noShowCount = dayApps.filter(a => a.status === 'no_show').length;
 
   // Solo las pendientes para mostrar en la agenda (excluye completadas)
   const nextApps = dayApps
-    .filter(a => a.status !== 'completed')
+    .filter(a => a.status !== 'completed' && a.status !== 'no_show')
     .slice(0, 10);
 
   if (loading) {
@@ -138,6 +153,18 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
         
+        <Card className="stat-card">
+          <CardContent className="flex items-center gap-4">
+            <div className="stat-icon" style={{ backgroundColor: 'hsla(var(--color-warning), 0.12)' }}>
+              <UserX size={24} style={{ color: 'hsl(var(--color-warning))' }} />
+            </div>
+            <div>
+              <p className="text-muted text-sm font-medium">No se presentó</p>
+              <h2 className="text-2xl font-bold">{noShowCount}</h2>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="stat-card cursor-pointer hoverable" onClick={() => navigate('/patients')}>
           <CardContent className="flex items-center gap-4">
             <div className="stat-icon bg-info-light">
@@ -238,7 +265,18 @@ export const Dashboard = () => {
               >
                 Cancelar Cita
               </Button>
-              <div className="flex gap-2">
+              <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                {selectedApp?.status === 'scheduled' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-warning border-warning"
+                    loading={noShowId === selectedApp?.id}
+                    onClick={() => handleMarkNoShow(selectedApp.id)}
+                  >
+                    <UserX size={16} /> No se presentó
+                  </Button>
+                )}
                 {selectedApp?.status === 'scheduled' && (
                   <Button
                     type="button"
